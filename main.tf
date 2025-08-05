@@ -1,11 +1,12 @@
 terraform {
+  required_version = ">= 1.7.0"
+
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
       version = "~> 3.0"
     }
   }
-  required_version = ">= 1.7.0"
 }
 
 provider "azurerm" {
@@ -16,12 +17,13 @@ provider "azurerm" {
   subscription_id = var.subscription_id
 }
 
+# Variables for authentication (values are passed via GitHub Actions or CLI)
 variable "client_id" {}
 variable "client_secret" {}
 variable "tenant_id" {}
 variable "subscription_id" {}
 
-# Path to unzipped folder
+# Path where the ZIP will be extracted
 variable "unzipped_path" {
   default = "unzipped"
 }
@@ -35,12 +37,14 @@ variable "existing_container_name" {
   default = "mycontainer"
 }
 
+# Read all files from the unzipped directory
 locals {
   files = fileset(var.unzipped_path, "**/*")
 }
 
+# Upload each file as a blob to the existing container
 resource "azurerm_storage_blob" "uploads" {
-  for_each = { for f in local.files : f => f }
+  for_each = { for file in local.files : file => file }
 
   name                   = each.key
   source                 = "${var.unzipped_path}/${each.value}"
@@ -48,4 +52,3 @@ resource "azurerm_storage_blob" "uploads" {
   storage_container_name = var.existing_container_name
   type                   = "Block"
 }
-#qq
