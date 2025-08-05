@@ -1,4 +1,4 @@
-name: Terraform Azure Blob Upload
+name: Terraform Deploy
 
 on:
   push:
@@ -6,51 +6,38 @@ on:
       - main
 
 jobs:
-  deploy:
+  terraform:
+    name: 'Terraform'
     runs-on: ubuntu-latest
 
-    env:
-      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Install unzip
-        run: sudo apt-get install unzip -y
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
 
-      - name: Download and unzip ZIP file
-        run: |
-          echo "Downloading ZIP file..."
-          curl -L -o New.zip "https://github.com/AKTECHLEARN/TESTZIP/raw/main/New.zip"
+    - name: Terraform Init
+      run: terraform init
 
-          echo "Unzipping contents..."
-          mkdir -p unzipped
-          unzip -q New.zip -d unzipped
+    - name: Terraform Validate
+      run: terraform validate
 
-          echo "ZIP downloaded and extracted to unzipped/"
+    - name: Terraform Plan
+      run: |
+        terraform plan \
+          -var="client_id=${{ secrets.ARM_CLIENT_ID }}" \
+          -var="client_secret=${{ secrets.ARM_CLIENT_SECRET }}" \
+          -var="tenant_id=${{ secrets.ARM_TENANT_ID }}" \
+          -var="subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}"
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.7.5
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Plan
-        run: terraform plan \
-          -var="client_id=${{ env.ARM_CLIENT_ID }}" \
-          -var="client_secret=${{ env.ARM_CLIENT_SECRET }}" \
-          -var="tenant_id=${{ env.ARM_TENANT_ID }}" \
-          -var="subscription_id=${{ env.ARM_SUBSCRIPTION_ID }}"
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve \
-          -var="client_id=${{ env.ARM_CLIENT_ID }}" \
-          -var="client_secret=${{ env.ARM_CLIENT_SECRET }}" \
-          -var="tenant_id=${{ env.ARM_TENANT_ID }}" \
-          -var="subscription_id=${{ env.ARM_SUBSCRIPTION_ID }}"
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main'
+      run: |
+        terraform apply -auto-approve \
+          -var="client_id=${{ secrets.ARM_CLIENT_ID }}" \
+          -var="client_secret=${{ secrets.ARM_CLIENT_SECRET }}" \
+          -var="tenant_id=${{ secrets.ARM_TENANT_ID }}" \
+          -var="subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}"
