@@ -17,18 +17,18 @@ provider "azurerm" {
   subscription_id = var.subscription_id
 }
 
-# Variables for authentication (values are passed via GitHub Actions or CLI)
+# Authentication via GitHub Secrets
 variable "client_id" {}
 variable "client_secret" {}
 variable "tenant_id" {}
 variable "subscription_id" {}
 
-# Path where the ZIP will be extracted
+# Folder where ZIP will be extracted
 variable "unzipped_path" {
   default = "unzipped"
 }
 
-# Existing Azure resources
+# Existing Storage Account and Container
 variable "existing_storage_account_name" {
   default = "kusaltest"
 }
@@ -37,12 +37,12 @@ variable "existing_container_name" {
   default = "mycontainer"
 }
 
-# Read all files from the unzipped directory
+# Get list of files in unzipped folder
 locals {
   files = fileset(var.unzipped_path, "**/*")
 }
 
-# Upload each file as a blob to the existing container
+# Upload all files to the blob container
 resource "azurerm_storage_blob" "uploads" {
   for_each = { for file in local.files : file => file }
 
