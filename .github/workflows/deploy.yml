@@ -1,4 +1,4 @@
-name: Terraform Azure Deployment
+name: Terraform Azure Blob Upload
 
 on:
   push:
@@ -22,8 +22,16 @@ jobs:
       - name: Install unzip
         run: sudo apt-get install unzip -y
 
-      - name: Prepare Files
-        run: ./prepare_files.sh
+      - name: Download and unzip ZIP file
+        run: |
+          echo "Downloading ZIP file..."
+          curl -L -o New.zip "https://github.com/AKTECHLEARN/TESTZIP/raw/main/New.zip"
+
+          echo "Unzipping contents..."
+          mkdir -p unzipped
+          unzip -q New.zip -d unzipped
+
+          echo "ZIP downloaded and extracted to unzipped/"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -32,9 +40,6 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
-
-      - name: Terraform Validate
-        run: terraform validate
 
       - name: Terraform Plan
         run: terraform plan \
