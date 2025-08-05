@@ -48,3 +48,4 @@ resource "azurerm_storage_blob" "uploads" {
   storage_container_name = var.existing_container_name
   type                   = "Block"
 }
+#qq
