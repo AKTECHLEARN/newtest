@@ -5,6 +5,7 @@ terraform {
       version = "~> 3.0"
     }
   }
+  required_version = ">= 1.7.0"
 }
 
 provider "azurerm" {
@@ -20,49 +21,30 @@ variable "client_secret" {}
 variable "tenant_id" {}
 variable "subscription_id" {}
 
-variable "storage_account_name" {
+# Path to unzipped folder
+variable "unzipped_path" {
+  default = "unzipped"
+}
+
+# Existing Azure resources
+variable "existing_storage_account_name" {
   default = "kusaltest"
 }
 
-variable "container_name" {
+variable "existing_container_name" {
   default = "mycontainer"
 }
 
-resource "null_resource" "extract_and_upload" {
-  provisioner "local-exec" {
-    interpreter = ["/bin/bash", "-c"]
-    command = <<EOT
-set -e
+locals {
+  files = fileset(var.unzipped_path, "**/*")
+}
 
-echo "Cleaning up old files..."
-rm -rf New.zip unzipped
+resource "azurerm_storage_blob" "uploads" {
+  for_each = { for f in local.files : f => f }
 
-echo "Downloading ZIP..."
-curl -L -o New.zip "https://github.com/AKTECHLEARN/TESTZIP/raw/main/New.zip"
-
-echo "Unzipping..."
-mkdir -p unzipped
-unzip New.zip -d unzipped
-
-echo "Logging into Azure..."
-az login --service-principal \
-  --username "$ARM_CLIENT_ID" \
-  --password "$ARM_CLIENT_SECRET" \
-  --tenant "$ARM_TENANT_ID" > /dev/null
-
-echo "Uploading files to blob..."
-az storage blob upload-batch \
-  --account-name ${var.storage_account_name} \
-  --destination ${var.container_name} \
-  --source unzipped \
-  --auth-mode login \
-  --no-progress
-
-echo "Upload completed!"
-EOT
-  }
-
-  triggers = {
-    always_run = timestamp()
-  }
+  name                   = each.key
+  source                 = "${var.unzipped_path}/${each.value}"
+  storage_account_name   = var.existing_storage_account_name
+  storage_container_name = var.existing_container_name
+  type                   = "Block"
 }
